@@ -1,0 +1,15 @@
+At line:1 char:102
++ ... $s=Get-Content $p -Raw; $s=$s.Replace('h-[calc(100vh-2rem)],'h-[calc( ...
++                                                                  ~
+Missing ')' in method call.
+At line:1 char:102
++ ... Content $p -Raw; $s=$s.Replace('h-[calc(100vh-2rem)],'h-[calc(100vh-2 ...
++                                                           ~~~~~~~
+Unexpected token 'h-[calc' in expression or statement.
+At line:1 char:282
++ ... -3 pt-3 border-t border-gray-100>'); Set-Content $p $s -Encoding UTF8
++                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The string is missing the terminator: '.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : MissingEndParenthesisInMethodCall
+ 
