@@ -19,7 +19,7 @@ function CustomerCard({ customer, onDelete, onEdit }) {
             src={
               customer.photo.startsWith('http')
                 ? customer.photo
-                : `http://127.0.0.1:8000/storage/${customer.photo}`
+                : `https://aab-e-noor-water-sales-production.up.railway.app/storage/${customer.photo}`
             }
             alt={shopName}
             className="w-14 h-14 rounded-full object-cover border"
