@@ -27,13 +27,5 @@ return Application::configure(basePath: dirname(__DIR__))
             return $request->is('api/*') || $request->expectsJson();
         });
 
-        $exceptions->redirectGuestsTo(function (Request $request) {
-            if ($request->is('api/*')) {
-                return null;
-            }
-
-            return route('login');
-        });
-
     })
     ->create();
