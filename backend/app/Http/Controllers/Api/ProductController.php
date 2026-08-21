@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Laravel\Sanctum\PersonalAccessToken;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -12,12 +11,6 @@ class ProductController extends Controller
 {
     public function index(): JsonResponse
     {
-        $token = request()->bearerToken();
-
-        if ($token && !PersonalAccessToken::findToken($token)) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-
         $products = Product::orderBy('name')->get();
 
         return response()->json($products);
@@ -34,6 +27,7 @@ class ProductController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'sku' => 'nullable|string',
             'category_id' => 'nullable|exists:categories,id',
             'unit' => 'nullable|string',
@@ -44,6 +38,12 @@ class ProductController extends Controller
             'minimum_stock' => 'integer',
             'status' => 'boolean',
         ]);
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request
+                ->file('image')
+                ->store('products', 'public');
+        }
 
         $product = Product::create($data);
 
@@ -56,6 +56,7 @@ class ProductController extends Controller
 
         $data = $request->validate([
             'name' => 'required|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'sku' => 'nullable|string',
             'category_id' => 'nullable|exists:categories,id',
             'unit' => 'nullable|string',
@@ -66,6 +67,12 @@ class ProductController extends Controller
             'minimum_stock' => 'integer',
             'status' => 'boolean',
         ]);
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request
+                ->file('image')
+                ->store('products', 'public');
+        }
 
         $product->update($data);
 
@@ -78,7 +85,8 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return response()->json(['message' => 'deleted']);
+        return response()->json([
+            'message' => 'deleted',
+        ]);
     }
 }
-
