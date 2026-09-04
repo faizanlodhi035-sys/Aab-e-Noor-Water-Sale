@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import Button from '../components/common/Button'
 import Input from '../components/common/Input'
 import { Link } from 'react-router-dom'
-import { apiRequest, getCustomers } from '../api/api'
+import { apiRequest, getCustomers, getStorageUrl } from '../api/api'
 
 function CustomerCard({ customer, onDelete, onEdit }) {
   const shopName = customer.shop_name || customer.name || 'Unnamed Customer'
@@ -16,11 +16,7 @@ function CustomerCard({ customer, onDelete, onEdit }) {
       <div className="flex items-center gap-3">
         {customer.photo ? (
           <img
-            src={
-              customer.photo.startsWith('http')
-                ? customer.photo
-                : `https://aab-e-noor-water-sales-production.up.railway.app/storage/${customer.photo}`
-            }
+            src={getStorageUrl(customer.photo)}
             alt={shopName}
             className="w-14 h-14 rounded-full object-cover border"
           />

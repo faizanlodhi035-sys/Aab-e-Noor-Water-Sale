@@ -1,8 +1,12 @@
-import React, { useEffect, useState } from 'react'
-import { apiRequest } from '../api/api'
+import React, { useEffect, useRef, useState } from 'react'
+import { apiRequest, getStorageUrl } from '../api/api'
 import Button from '../components/common/Button'
 import Input from '../components/common/Input'
-import { Pencil, Trash2, Plus } from 'lucide-react'
+import { Pencil, Trash2, Plus, Camera, Upload, X } from 'lucide-react'
+
+function getImageUrl(image) {
+  return getStorageUrl(image)
+}
 
 function ProductCard({ p, onEdit, onDelete }) {
   const mrp = p.mrp ?? 0
@@ -12,21 +16,26 @@ function ProductCard({ p, onEdit, onDelete }) {
 
   return (
     <div className="bg-white p-3 rounded shadow flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="w-14 h-14 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-14 h-14 bg-gray-100 rounded overflow-hidden flex items-center justify-center flex-shrink-0">
           {p.image ? (
             <img
-              src={p.image}
+              src={getImageUrl(p.image)}
               alt={p.name}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
             />
           ) : (
-            <div className="text-xs text-gray-500">No Image</div>
+            <div className="text-xs text-gray-500 text-center">
+              No Image
+            </div>
           )}
         </div>
 
-        <div>
-          <div className="font-semibold">
+        <div className="min-w-0">
+          <div className="font-semibold truncate">
             {p.name}{' '}
             {!isActive && (
               <span className="text-xs text-red-500 ml-2">
@@ -50,7 +59,7 @@ function ProductCard({ p, onEdit, onDelete }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         <button
           title="Edit"
           onClick={() => onEdit(p)}
@@ -75,13 +84,16 @@ function Modal({ show, title, onClose, children }) {
   if (!show) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white w-full max-w-2xl p-4 rounded-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3">
+      <div className="bg-white w-full max-w-2xl p-4 rounded-lg max-h-[95vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-3">
           <div className="font-semibold">{title}</div>
 
-          <button onClick={onClose} className="text-gray-500">
-            Close
+          <button
+            onClick={onClose}
+            className="text-gray-500 p-1"
+          >
+            <X size={20} />
           </button>
         </div>
 
@@ -99,6 +111,12 @@ export default function Products() {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
 
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState('')
+
+  const cameraInputRef = useRef(null)
+  const galleryInputRef = useRef(null)
+
   const [form, setForm] = useState({
     name: '',
     size: '',
@@ -109,7 +127,6 @@ export default function Products() {
     minStock: 0,
     category: '',
     description: '',
-    image: '',
   })
 
   async function loadProducts() {
@@ -148,8 +165,18 @@ export default function Products() {
     loadProducts()
   }, [])
 
+  function clearImagePreview() {
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview)
+    }
+
+    setImagePreview('')
+    setImageFile(null)
+  }
+
   function openAdd() {
     setEditing(null)
+    clearImagePreview()
 
     setForm({
       name: '',
@@ -161,7 +188,6 @@ export default function Products() {
       minStock: 0,
       category: '',
       description: '',
-      image: '',
     })
 
     setShowModal(true)
@@ -169,6 +195,13 @@ export default function Products() {
 
   function openEdit(p) {
     setEditing(p)
+
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview)
+    }
+
+    setImageFile(null)
+    setImagePreview(getImageUrl(p.image))
 
     setForm({
       name: p.name || '',
@@ -180,10 +213,42 @@ export default function Products() {
       minStock: p.minStock ?? 0,
       category: p.category || '',
       description: p.description || '',
-      image: p.image || '',
     })
 
     setShowModal(true)
+  }
+
+  function handleImageChange(event) {
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image.')
+      event.target.value = ''
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be 5MB or less.')
+      event.target.value = ''
+      return
+    }
+
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview)
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+
+    setImageFile(file)
+    setImagePreview(previewUrl)
+
+    event.target.value = ''
+  }
+
+  function removeImage() {
+    clearImagePreview()
   }
 
   function validateForm() {
@@ -229,44 +294,92 @@ export default function Products() {
     setLoading(true)
 
     try {
-      const payload = {
-        name: form.name.trim(),
-        sku: editing?.sku || null,
-        category_id: editing?.category_id || null,
-        unit: form.size,
-        purchase_price: Number(form.purchasePrice),
-        sale_price: Number(form.price),
-        mrp: Number(form.mrp),
-        stock_quantity: editing
-          ? Number(editing.stock ?? 0)
-          : Number(form.initialStock),
-        minimum_stock: Number(form.minStock),
-        status: true,
+      const formData = new FormData()
+
+      formData.append('name', form.name.trim())
+      formData.append('sku', editing?.sku || '')
+      formData.append(
+        'category_id',
+        editing?.category_id ? String(editing.category_id) : ''
+      )
+      formData.append('unit', form.size)
+      formData.append(
+        'purchase_price',
+        String(Number(form.purchasePrice))
+      )
+      formData.append(
+        'sale_price',
+        String(Number(form.price))
+      )
+      formData.append('mrp', String(Number(form.mrp)))
+      formData.append(
+        'stock_quantity',
+        editing
+          ? String(Number(editing.stock ?? 0))
+          : String(Number(form.initialStock))
+      )
+      formData.append(
+        'minimum_stock',
+        String(Number(form.minStock))
+      )
+      formData.append('status', '1')
+
+      if (imageFile) {
+        formData.append('image', imageFile)
       }
 
+      let savedProduct
+
       if (editing) {
-        const updated = await apiRequest(`/products/${editing.id}`, {
-          method: 'PUT',
-          body: JSON.stringify(payload),
-        })
+        // Multipart PUT/PATCH can be problematic with PHP.
+        // Laravel method spoofing keeps image upload reliable.
+        formData.append('_method', 'PUT')
+
+        savedProduct = await apiRequest(
+          `/products/${editing.id}`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        )
 
         setProducts((prev) =>
           prev.map((p) =>
             p.id === editing.id
               ? {
                   ...p,
-                  name: updated.name,
-                  size: updated.unit || form.size,
-                  mrp: Number(updated.mrp ?? form.mrp),
-                  price: Number(updated.sale_price ?? form.price),
+                  id: savedProduct.id,
+                  name: savedProduct.name,
+                  size: savedProduct.unit || form.size,
+                  mrp: Number(savedProduct.mrp ?? form.mrp),
+                  price: Number(
+                    savedProduct.sale_price ?? form.price
+                  ),
                   purchasePrice: Number(
-                    updated.purchase_price ?? form.purchasePrice
+                    savedProduct.purchase_price ??
+                      form.purchasePrice
                   ),
-                  stock: Number(updated.stock_quantity ?? editing.stock ?? 0),
+                  stock: Number(
+                    savedProduct.stock_quantity ??
+                      editing.stock ??
+                      0
+                  ),
                   minStock: Number(
-                    updated.minimum_stock ?? form.minStock
+                    savedProduct.minimum_stock ??
+                      form.minStock
                   ),
-                  isActive: updated.status !== false,
+                  image:
+                    savedProduct.image ??
+                    editing.image ??
+                    '',
+                  isActive:
+                    savedProduct.status !== false &&
+                    savedProduct.status !== 0,
+                  sku: savedProduct.sku || editing.sku || '',
+                  category_id:
+                    savedProduct.category_id ??
+                    editing.category_id ??
+                    null,
                 }
               : p
           )
@@ -274,39 +387,67 @@ export default function Products() {
 
         alert('Product updated successfully')
       } else {
-        const created = await apiRequest('/products', {
+        savedProduct = await apiRequest('/products', {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: formData,
         })
 
         const newProduct = {
-          id: created.id,
-          name: created.name || form.name,
-          size: created.unit || form.size,
-          mrp: Number(created.mrp ?? form.mrp),
-          price: Number(created.sale_price ?? form.price),
+          id: savedProduct.id,
+          name: savedProduct.name || form.name,
+          size: savedProduct.unit || form.size,
+          mrp: Number(
+            savedProduct.mrp ?? form.mrp
+          ),
+          price: Number(
+            savedProduct.sale_price ?? form.price
+          ),
           purchasePrice: Number(
-            created.purchase_price ?? form.purchasePrice
+            savedProduct.purchase_price ??
+              form.purchasePrice
           ),
-          stock: Number(created.stock_quantity ?? form.initialStock),
+          stock: Number(
+            savedProduct.stock_quantity ??
+              form.initialStock
+          ),
           minStock: Number(
-            created.minimum_stock ?? form.minStock
+            savedProduct.minimum_stock ??
+              form.minStock
           ),
-          category: '',
-          description: '',
-          image: '',
-          isActive: created.status !== false,
+          category:
+            savedProduct.category?.name ||
+            '',
+          description:
+            savedProduct.description ||
+            '',
+          image:
+            savedProduct.image ||
+            '',
+          isActive:
+            savedProduct.status !== false &&
+            savedProduct.status !== 0,
+          sku: savedProduct.sku || '',
+          category_id:
+            savedProduct.category_id ||
+            null,
         }
 
-        setProducts((prev) => [newProduct, ...prev])
+        setProducts((prev) => [
+          newProduct,
+          ...prev,
+        ])
 
         alert('Product added successfully')
       }
 
+      clearImagePreview()
       setShowModal(false)
     } catch (error) {
       console.error('Product save failed:', error)
-      alert(error.message || 'Failed to save product')
+      alert(
+        error.message ||
+          'Failed to save product'
+      )
     } finally {
       setLoading(false)
     }
@@ -315,7 +456,7 @@ export default function Products() {
   async function confirmDelete(p) {
     const confirmed = confirm(
       `Are you sure you want to delete this product?\n\n${p.name}\nCurrent Stock: ${p.stock || 0}`
-    )
+    ) 
 
     if (!confirmed) return
 
@@ -326,29 +467,56 @@ export default function Products() {
         method: 'DELETE',
       })
 
-      setProducts((prev) => prev.filter((item) => item.id !== p.id))
+      setProducts((prev) =>
+        prev.filter(
+          (item) => item.id !== p.id
+        )
+      )
 
       alert('Product deleted successfully')
     } catch (error) {
-      console.error('Product delete failed:', error)
-      alert(error.message || 'Failed to delete product')
+      console.error(
+        'Product delete failed:',
+        error
+      )
+      alert(
+        error.message ||
+          'Failed to delete product'
+      )
     } finally {
       setLoading(false)
     }
   }
 
   const filtered = products.filter((p) => {
-    if (filter === 'active' && p.isActive === false) return false
-    if (filter === 'inactive' && p.isActive !== false) return false
+    if (
+      filter === 'active' &&
+      p.isActive === false
+    ) {
+      return false
+    }
+
+    if (
+      filter === 'inactive' &&
+      p.isActive !== false
+    ) {
+      return false
+    }
 
     const term = q.trim().toLowerCase()
 
     if (!term) return true
 
     return (
-      (p.name || '').toLowerCase().includes(term) ||
-      (p.size || '').toLowerCase().includes(term) ||
-      (p.category || '').toLowerCase().includes(term)
+      (p.name || '')
+        .toLowerCase()
+        .includes(term) ||
+      (p.size || '')
+        .toLowerCase()
+        .includes(term) ||
+      (p.category || '')
+        .toLowerCase()
+        .includes(term)
     )
   })
 
@@ -358,7 +526,9 @@ export default function Products() {
         <Input
           placeholder="Search products, size or category"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) =>
+            setQ(e.target.value)
+          }
         />
 
         <div className="flex gap-2">
@@ -373,16 +543,26 @@ export default function Products() {
       </div>
 
       <div className="flex items-center gap-3 mb-3">
-        <div className="text-sm">Filter:</div>
+        <div className="text-sm">
+          Filter:
+        </div>
 
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={(e) =>
+            setFilter(e.target.value)
+          }
           className="p-2 border rounded"
         >
-          <option value="all">All</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="all">
+            All
+          </option>
+          <option value="active">
+            Active
+          </option>
+          <option value="inactive">
+            Inactive
+          </option>
         </select>
       </div>
 
@@ -393,11 +573,12 @@ export default function Products() {
       )}
 
       <div className="space-y-2">
-        {filtered.length === 0 && !loading && (
-          <div className="text-sm text-gray-500">
-            No products found
-          </div>
-        )}
+        {filtered.length === 0 &&
+          !loading && (
+            <div className="text-sm text-gray-500">
+              No products found
+            </div>
+          )}
 
         {filtered.map((p) => (
           <ProductCard
@@ -411,15 +592,25 @@ export default function Products() {
 
       <Modal
         show={showModal}
-        title={editing ? 'Edit Product' : 'Add Product'}
-        onClose={() => setShowModal(false)}
+        title={
+          editing
+            ? 'Edit Product'
+            : 'Add Product'
+        }
+        onClose={() => {
+          clearImagePreview()
+          setShowModal(false)
+        }}
       >
         <div className="space-y-2">
           <Input
             label="Product Name"
             value={form.name}
             onChange={(e) =>
-              setForm({ ...form, name: e.target.value })
+              setForm({
+                ...form,
+                name: e.target.value,
+              })
             }
           />
 
@@ -427,7 +618,10 @@ export default function Products() {
             label="Size"
             value={form.size}
             onChange={(e) =>
-              setForm({ ...form, size: e.target.value })
+              setForm({
+                ...form,
+                size: e.target.value,
+              })
             }
           />
 
@@ -437,7 +631,10 @@ export default function Products() {
               value={form.mrp}
               type="number"
               onChange={(e) =>
-                setForm({ ...form, mrp: e.target.value })
+                setForm({
+                  ...form,
+                  mrp: e.target.value,
+                })
               }
             />
 
@@ -446,7 +643,10 @@ export default function Products() {
               value={form.price}
               type="number"
               onChange={(e) =>
-                setForm({ ...form, price: e.target.value })
+                setForm({
+                  ...form,
+                  price: e.target.value,
+                })
               }
             />
           </div>
@@ -459,7 +659,8 @@ export default function Products() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  purchasePrice: e.target.value,
+                  purchasePrice:
+                    e.target.value,
                 })
               }
             />
@@ -471,7 +672,8 @@ export default function Products() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  minStock: e.target.value,
+                  minStock:
+                    e.target.value,
                 })
               }
             />
@@ -485,7 +687,8 @@ export default function Products() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  initialStock: e.target.value,
+                  initialStock:
+                    e.target.value,
                 })
               }
             />
@@ -495,7 +698,11 @@ export default function Products() {
             label="Category"
             value={form.category}
             onChange={(e) =>
-              setForm({ ...form, category: e.target.value })
+              setForm({
+                ...form,
+                category:
+                  e.target.value,
+              })
             }
           />
 
@@ -505,29 +712,97 @@ export default function Products() {
             onChange={(e) =>
               setForm({
                 ...form,
-                description: e.target.value,
+                description:
+                  e.target.value,
               })
             }
           />
 
-          <Input
-            label="Image URL"
-            value={form.image}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                image: e.target.value,
-              })
-            }
-          />
+          {/* Product Image */}
+          <div className="pt-2">
+            <label className="block text-sm font-medium mb-2">
+              Product Picture
+            </label>
+
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+
+            {imagePreview && (
+              <div className="relative mb-3">
+                <img
+                  src={imagePreview}
+                  alt="Product preview"
+                  className="w-full h-48 object-cover rounded-lg border"
+                />
+
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
+                  title="Remove image"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  cameraInputRef.current?.click()
+                }
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-blue-600 text-white font-medium"
+              >
+                <Camera size={18} />
+                Take Photo
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  galleryInputRef.current?.click()
+                }
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-800 text-white font-medium"
+              >
+                <Upload size={18} />
+                Upload Picture
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-2">
+              JPG, PNG, WEBP — maximum 5MB
+            </p>
+          </div>
 
           <div className="flex justify-end gap-2 mt-3">
-            <Button onClick={() => setShowModal(false)}>
+            <Button
+              onClick={() => {
+                clearImagePreview()
+                setShowModal(false)
+              }}
+            >
               Cancel
             </Button>
 
             <Button onClick={save}>
-              {editing ? 'Update Product' : 'Add Product'}
+              {editing
+                ? 'Update Product'
+                : 'Add Product'}
             </Button>
           </div>
         </div>

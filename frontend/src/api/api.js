@@ -1,4 +1,15 @@
-const API_BASE_URL = "https://aab-e-noor-water-sales-production.up.railway.app/api";
+export const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000/api").replace(/\/+$/, '');
+
+export function getStorageUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+    const baseUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    return `${baseUrl}/storage/${cleanPath}`;
+}
+
 
 export async function apiRequest(endpoint, options = {}) {
     const token = localStorage.getItem("auth_token");
