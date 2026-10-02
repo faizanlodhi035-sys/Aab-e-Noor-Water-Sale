@@ -9,7 +9,8 @@ import {
   Settings,
   Boxes,
   Receipt,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react'
 
 import { AuthContext } from '../../contexts/AuthContext'
@@ -25,54 +26,67 @@ const items = [
   { to: '/settings', label: 'Settings', icon: Settings }
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ mobile = false, mobileOpen = false, onNavigate = () => {} }) {
   const { logout } = useContext(AuthContext)
   const navigate = useNavigate()
 
   async function handleLogout() {
     await logout()
+    onNavigate()
     navigate('/login', { replace: true })
   }
 
-  return (
-    <aside className="hidden md:flex md:flex-col w-56 bg-white shadow rounded-lg p-3 sticky top-4 h-[calc(100vh-2rem)]">
+  const navClassName = ({ isActive }) =>
+    `flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
+      isActive
+        ? 'bg-purifly/10 text-purifly font-semibold'
+        : 'text-gray-700 hover:bg-gray-50'
+    }`
 
-      {/* Logo */}
-      <div className="mb-4 text-center">
-        <div className="text-purifly font-bold text-lg">
-          Aab-e-Noor
+  const content = (
+    <aside
+      id={mobile ? 'mobile-sidebar' : undefined}
+      className={
+        mobile
+          ? `fixed left-0 top-0 z-50 h-screen w-[260px] bg-white shadow-2xl border-r border-gray-200 transform transition-transform duration-200 ease-out md:hidden ${
+              mobileOpen ? 'translate-x-0' : '-translate-x-full'
+            }`
+          : 'hidden md:flex md:flex-col w-56 bg-white shadow rounded-lg p-3 sticky top-4 h-[calc(100vh-2rem)]'
+      }
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <div className="text-center flex-1">
+          <div className="text-purifly font-bold text-lg">Aab-e-Noor</div>
+          <div className="text-xs text-gray-500">Water Sales</div>
         </div>
 
-        <div className="text-xs text-gray-500">
-          Water Sales
-        </div>
+        {mobile && (
+          <button
+            type="button"
+            aria-label="Close navigation menu"
+            onClick={onNavigate}
+            className="p-2 rounded-md text-gray-500 hover:bg-gray-100 md:hidden"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
-      {/* Navigation */}
       <nav className="space-y-1 overflow-y-auto">
-
         {items.map((it) => (
           <NavLink
             key={it.to}
             to={it.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
-                isActive
-                  ? 'bg-purifly/10 text-purifly font-semibold'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`
-            }
+            onClick={onNavigate}
+            className={navClassName}
           >
             <it.icon size={18} />
             <span>{it.label}</span>
           </NavLink>
         ))}
-
       </nav>
 
-      {/* Logout */}
       <div className="pt-3 mt-3 border-t border-gray-100">
-
         <button
           type="button"
           onClick={handleLogout}
@@ -81,11 +95,11 @@ export default function Sidebar() {
           <LogOut size={18} />
           <span>Logout</span>
         </button>
-
       </div>
-
     </aside>
   )
+
+  return content
 }
 
 

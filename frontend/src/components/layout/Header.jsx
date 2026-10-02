@@ -1,22 +1,34 @@
 import React, { useContext } from 'react'
 import { AuthContext } from '../../contexts/AuthContext'
-import { Menu, Bell, User2 } from 'lucide-react'
+import { Menu, Bell, User2, X } from 'lucide-react'
 
-export default function Header() {
+export default function Header({ mobileMenuOpen, onMenuToggle }) {
   const { user } = useContext(AuthContext)
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white shadow-sm sticky top-0 z-30">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button className="p-2 rounded-md text-purifly/90 bg-purifly/10 md:hidden"><Menu size={18} /></button>
+          <button
+            type="button"
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-sidebar"
+            onClick={onMenuToggle}
+            className="p-2 rounded-md text-purifly/90 bg-purifly/10 md:hidden"
+          >
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
           <div>
             <div className="text-lg font-semibold text-purifly">Aab-e-Noor Water Sales</div>
             <div className="text-xs text-gray-500">Order • Save • Deliver</div>
           </div>
         </div>
+
         <div className="flex items-center gap-3">
-          <button className="p-2 rounded-md text-gray-600"><Bell size={18} /></button>
+          <button type="button" className="p-2 rounded-md text-gray-600" aria-label="Notifications">
+            <Bell size={18} />
+          </button>
           <div className="flex items-center gap-2">
             <div className="hidden md:block text-right">
               <div className="text-sm font-semibold">{user?.name}</div>
