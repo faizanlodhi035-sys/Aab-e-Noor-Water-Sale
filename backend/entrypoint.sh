@@ -10,10 +10,13 @@ php artisan config:clear || true
 php artisan cache:clear || true
 php artisan storage:link --force || true
 
-# Run database migrations if DB_HOST is defined
-if [ -n "$DB_HOST" ]; then
-    echo "Running database migrations..."
-    php artisan migrate --force || echo "Migration skipped or warning"
-fi
+# Create SQLite database file if it does not exist
+touch database/database.sqlite
+chmod 666 database/database.sqlite
+
+# Run database migrations
+echo "Running database migrations..."
+php artisan migrate --force --seed || echo "Migration skipped or warning"
+
 
 exec apache2-foreground
