@@ -1,4 +1,4 @@
-export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
+export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'https://aab-e-noor-water-sale.onrender.com/api').replace(/\/+$/, '');
 
 export function getStorageUrl(path) {
     if (!path) return '';
