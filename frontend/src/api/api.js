@@ -1,24 +1,23 @@
-export const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000/api").replace(/\/+$/, '');
+export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
 
 export function getStorageUrl(path) {
     if (!path) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) {
         return path;
     }
+
     const baseUrl = API_BASE_URL.replace(/\/api\/?$/, '');
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
     return `${baseUrl}/storage/${cleanPath}`;
 }
 
-
 export async function apiRequest(endpoint, options = {}) {
-    const token = localStorage.getItem("auth_token");
-
+    const token = localStorage.getItem('auth_token');
     const isFormData = options.body instanceof FormData;
 
     const headers = {
-        "Accept": "application/json",
-        ...(isFormData ? {} : { "Content-Type": "application/json" }),
+        Accept: 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(options.headers || {}),
     };
 
@@ -32,14 +31,12 @@ export async function apiRequest(endpoint, options = {}) {
     });
 
     const text = await response.text();
-
     let data;
 
     try {
         data = text ? JSON.parse(text) : {};
     } catch (error) {
-        console.error("Non-JSON API response:", text);
-
+        console.error('Non-JSON API response:', text);
         throw new Error(
             `Server returned invalid JSON (${response.status}). Check Laravel backend.`
         );
@@ -47,9 +44,7 @@ export async function apiRequest(endpoint, options = {}) {
 
     if (!response.ok) {
         throw new Error(
-            data.message ||
-            data.error ||
-            `API request failed (${response.status})`
+            data.message || data.error || `API request failed (${response.status})`
         );
     }
 
@@ -57,21 +52,20 @@ export async function apiRequest(endpoint, options = {}) {
 }
 
 export async function login(login, password) {
-    const data = await apiRequest("/login", {
-        method: "POST",
+    const cleanLogin = (login || '').trim();
+    const cleanPass = (password || '').trim();
+
+    const data = await apiRequest('/login', {
+        method: 'POST',
         body: JSON.stringify({
-            login,
-            password,
+            login: cleanLogin,
+            password: cleanPass,
         }),
     });
 
     if (data.success && data.data?.token) {
-        localStorage.setItem("auth_token", data.data.token);
-
-        localStorage.setItem(
-            "auth_user",
-            JSON.stringify(data.data.user)
-        );
+        localStorage.setItem('auth_token', data.data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.data.user));
     }
 
     return data;
@@ -79,15 +73,17 @@ export async function login(login, password) {
 
 export async function logout() {
     try {
-        await apiRequest("/logout", {
-            method: "POST",
+        await apiRequest('/logout', {
+            method: 'POST',
         });
+    } catch {
+        // Keep local logout resilient, but never fake backend success.
     } finally {
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("auth_user");
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
     }
 }
 
 export async function getCustomers() {
-    return await apiRequest("/customers");
+    return await apiRequest('/customers');
 }
