@@ -12,7 +12,8 @@ php artisan storage:link --force || true
 
 # Create SQLite database file if it does not exist
 touch database/database.sqlite
-chmod 666 database/database.sqlite
+chown -R www-data:www-data database
+chmod -R 775 database
 
 # Run database migrations
 echo "Running database migrations..."
