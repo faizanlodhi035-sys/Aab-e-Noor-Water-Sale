@@ -40,12 +40,20 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request
-                ->file('image')
-                ->store('products', 'public');
+            try {
+                $data['image'] = $request
+                    ->file('image')
+                    ->store('products', 'public');
+            } catch (\Exception $e) {
+                return response()->json(['error_debug' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+            }
         }
 
-        $product = Product::create($data);
+        try {
+            $product = Product::create($data);
+        } catch (\Exception $e) {
+            return response()->json(['error_debug' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+        }
 
         return response()->json($product, 201);
     }
@@ -69,12 +77,20 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request
-                ->file('image')
-                ->store('products', 'public');
+            try {
+                $data['image'] = $request
+                    ->file('image')
+                    ->store('products', 'public');
+            } catch (\Exception $e) {
+                return response()->json(['error_debug' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+            }
         }
 
-        $product->update($data);
+        try {
+            $product->update($data);
+        } catch (\Exception $e) {
+            return response()->json(['error_debug' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+        }
 
         return response()->json($product);
     }
